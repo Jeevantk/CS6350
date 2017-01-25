@@ -83,6 +83,7 @@ int main(int argc,char** argv)
 	
 	imshow("Equalised Image",equalised);
 	waitKey(0);
+	imwrite("eualised.jpg",equalised);
 	
 
 }
