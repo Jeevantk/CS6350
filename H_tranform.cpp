@@ -1,3 +1,6 @@
+//Author -------> Jeevan Thomas Koshy
+
+
 #include "opencv/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/xfeatures2d.hpp"
@@ -30,11 +33,18 @@ int main()
 	sift->compute(img1,keypoints_1,descriptor1);
 	sift->compute(img2,keypoints_2,descriptor2);
 
-	BFMatcher matcher;
-	vector<DMatch> matches;
+	
+	// Implementing Ratio Test. In order to implement ratio test in opencv use BFMatcher(Brute Force Matcher) with KNN=2(K nearest Neighbours)
+	// After getting the best two matches we can compare their distances to apply my master ratio test.
+	//Symmetric test is also inbuild in BFMatcher but will be of as default (turn that on by using crossCheck =True)
 
-	//Finding the Matches 
-	matcher.match(descriptor1,descriptor2,matches);
+	BFMatcher matcher(NORM_L2,true);
+	vector< vector< DMatch > > matches;
+
+	//Finding the Matches
+	matcher.knnMatch(descriptor1,descriptor2, matches, 2);
+
+	
 
 	/*
 	These matches are expected to have an accuracy of around 50%.
@@ -45,4 +55,39 @@ int main()
 	Hoping that after these we will get correct correspondences in the images and 
 	*/
 
+	vector<DMatch> good_matches;
+	for(int i=0;i<matches.size();i++)
+	{
+		const float ratio=0.9;
+		if(matches[i][0].distance<ratio*matches[i][1].distance)
+		{
+			good_matches.push_back(matches[i][0]);
+		}
+	}
+
+	vector<Point2f> image1;
+	vector<Point2f> image2;
+
+	//Computing the image locations corresponding to the good matches found in order to input that to find the Homography Transformation
+
+	for(int i=0; i< good_matches.size();i++)
+	{
+		image1.push_back(keypoints_1[good_matches[i].queryIdx].pt);
+		image2.push_back(keypoints_2[good_matches[i].trainIdx].pt);
+	}
+
+	//Applying RANSAC to remove all the outliers and to compute the HOMOGRAPHY transformation
+	
+	Mat H=findHomography(image1,image2,CV_RANSAC);
+
+	Mat result;
+
+	//perspective transformation for the second image
+	warpPerspective(img1,result,H,Size(img1.cols+img2.cols,img1.rows,img2.rows));
+	Mat half(result,Rect(0,0,img2.cols,img2.rows));
+	img2.copyTo(half);
+	imshow("Result",result);
+
+	waitKey(0);
+	return 0;
 }
