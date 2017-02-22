@@ -1,10 +1,11 @@
 //Author -------> Jeevan Thomas Koshy
+//Owned by ----> Effizient Pvt Ltd
 
 
-#include "opencv/imgproc/imgproc.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/xfeatures2d.hpp"
-
+#include "opencv2/calib3d/calib3d.hpp"
 #include "iostream"
 
 using namespace std;
@@ -16,8 +17,8 @@ int main()
 {
 
 	//Reading the images
-	Mat img1=imread("pan1.jpg");
-	Mat img2=imread("pan2.jpg");
+	Mat img1=imread("pan2.jpg");
+	Mat img2=imread("pan1.jpg");
 
 
 	Ptr<Feature2D> sift=SIFT::create();
@@ -28,22 +29,26 @@ int main()
 	sift->detect(img2,keypoints_2);
 
 	Mat descriptor1,descriptor2;
+	imshow("Image 1",img1);
+	imshow("Image 2",img2);
+
+	waitKey(0);
+
 
 	//Computing Descriptors
 	sift->compute(img1,keypoints_1,descriptor1);
 	sift->compute(img2,keypoints_2,descriptor2);
 
-	
 	// Implementing Ratio Test. In order to implement ratio test in opencv use BFMatcher(Brute Force Matcher) with KNN=2(K nearest Neighbours)
 	// After getting the best two matches we can compare their distances to apply my master ratio test.
 	//Symmetric test is also inbuild in BFMatcher but will be of as default (turn that on by using crossCheck =True)
 
-	BFMatcher matcher(NORM_L2,true);
-	vector< vector< DMatch > > matches;
+	BFMatcher matcher(NORM_L2); // Has to put the second parameter as True for implementing Symmetric Test . Currently its giving run time errors. Need to figure out a way to solve that
+	vector<vector<DMatch> > matches;
 
 	//Finding the Matches
-	matcher.knnMatch(descriptor1,descriptor2, matches, 2);
 
+	matcher.knnMatch(descriptor1,descriptor2, matches, 2);
 	
 
 	/*
@@ -65,6 +70,7 @@ int main()
 		}
 	}
 
+
 	vector<Point2f> image1;
 	vector<Point2f> image2;
 
@@ -83,7 +89,11 @@ int main()
 	Mat result;
 
 	//perspective transformation for the second image
-	warpPerspective(img1,result,H,Size(img1.cols+img2.cols,img1.rows,img2.rows));
+
+
+	warpPerspective(img1,result,H,Size(img1.cols+img2.cols,img1.rows));
+
+
 	Mat half(result,Rect(0,0,img2.cols,img2.rows));
 	img2.copyTo(half);
 	imshow("Result",result);
