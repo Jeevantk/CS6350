@@ -17,8 +17,8 @@ int main()
 {
 
 	//Reading the images
-	Mat img1=imread("pan2.jpg");
-	Mat img2=imread("pan1.jpg");
+	Mat img1=imread("rio-00.png");
+	Mat img2=imread("rio-01.png");
 
 
 	Ptr<Feature2D> sift=SIFT::create();
@@ -48,7 +48,7 @@ int main()
 
 	//Finding the Matches
 
-	matcher.knnMatch(descriptor1,descriptor2, matches, 2);
+	matcher.knnMatch(descriptor1,descriptor2, matches, 4);
 	
 
 	/*
@@ -84,6 +84,8 @@ int main()
 
 	//Applying RANSAC to remove all the outliers and to compute the HOMOGRAPHY transformation
 	
+	// instead of using this apply a RANSAC on features seperately and then apply Bundle Adjustment to obtain the camera parameters
+	//
 	Mat H=findHomography(image1,image2,CV_RANSAC);
 
 	Mat result;
