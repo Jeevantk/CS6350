@@ -889,9 +889,13 @@ int main(int argc, char* argv[])
         blender->blend(result, result_mask);
 
         LOGLN("Compositing, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
-
+        imshow("test",result);
+        waitKey(0);
         imwrite(result_name, result);
     }
+
+    // imshow("stitched",result);
+    // waitKey(0);
 
     LOGLN("Finished, total time: " << ((getTickCount() - app_start_time) / getTickFrequency()) << " sec");
     return 0;
