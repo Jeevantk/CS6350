@@ -1,45 +1,4 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
-//
-//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
-//
-//  By downloading, copying, installing or using the software you agree to this license.
-//  If you do not agree to this license, do not download, install,
-//  copy or use the software.
-//
-//
-//                          License Agreement
-//                For Open Source Computer Vision Library
-//
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
-// Third party copyrights are property of their respective owners.
-//
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-//
-//   * Redistribution's of source code must retain the above copyright notice,
-//     this list of conditions and the following disclaimer.
-//
-//   * Redistribution's in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
-//
-//   * The name of the copyright holders may not be used to endorse or promote products
-//     derived from this software without specific prior written permission.
-//
-// This software is provided by the copyright holders and contributors "as is" and
-// any express or implied warranties, including, but not limited to, the implied
-// warranties of merchantability and fitness for a particular purpose are disclaimed.
-// In no event shall the Intel Corporation or contributors be liable for any direct,
-// indirect, incidental, special, exemplary, or consequential damages
-// (including, but not limited to, procurement of substitute goods or services;
-// loss of use, data, or profits; or business interruption) however caused
-// and on any theory of liability, whether in contract, strict liability,
-// or tort (including negligence or otherwise) arising in any way out of
-// the use of this software, even if advised of the possibility of such damage.
-//
-//
-//M*/
+
 
 #include <iostream>
 #include <fstream>
@@ -66,71 +25,6 @@
 using namespace std;
 using namespace cv;
 using namespace cv::detail;
-
-static void printUsage()
-{
-    cout <<
-        "Rotation model images stitcher.\n\n"
-        "stitching_detailed img1 img2 [...imgN] [flags]\n\n"
-        "Flags:\n"
-        "  --preview\n"
-        "      Run stitching in the preview mode. Works faster than usual mode,\n"
-        "      but output image will have lower resolution.\n"
-        "  --try_cuda (yes|no)\n"
-        "      Try to use CUDA. The default value is 'no'. All default values\n"
-        "      are for CPU mode.\n"
-        "\nMotion Estimation Flags:\n"
-        "  --work_megapix <float>\n"
-        "      Resolution for image registration step. The default is 0.6 Mpx.\n"
-        "  --features (surf|orb)\n"
-        "      Type of features used for images matching. The default is surf.\n"
-        "  --matcher (homography|affine)\n"
-        "      Matcher used for pairwise image matching.\n"
-        "  --estimator (homography|affine)\n"
-        "      Type of estimator used for transformation estimation.\n"
-        "  --match_conf <float>\n"
-        "      Confidence for feature matching step. The default is 0.65 for surf and 0.3 for orb.\n"
-        "  --conf_thresh <float>\n"
-        "      Threshold for two images are from the same panorama confidence.\n"
-        "      The default is 1.0.\n"
-        "  --ba (no|reproj|ray|affine)\n"
-        "      Bundle adjustment cost function. The default is ray.\n"
-        "  --ba_refine_mask (mask)\n"
-        "      Set refinement mask for bundle adjustment. It looks like 'x_xxx',\n"
-        "      where 'x' means refine respective parameter and '_' means don't\n"
-        "      refine one, and has the following format:\n"
-        "      <fx><skew><ppx><aspect><ppy>. The default mask is 'xxxxx'. If bundle\n"
-        "      adjustment doesn't support estimation of selected parameter then\n"
-        "      the respective flag is ignored.\n"
-        "  --wave_correct (no|horiz|vert)\n"
-        "      Perform wave effect correction. The default is 'horiz'.\n"
-        "  --save_graph <file_name>\n"
-        "      Save matches graph represented in DOT language to <file_name> file.\n"
-        "      Labels description: Nm is number of matches, Ni is number of inliers,\n"
-        "      C is confidence.\n"
-        "\nCompositing Flags:\n"
-        "  --warp (affine|plane|cylindrical|spherical|fisheye|stereographic|compressedPlaneA2B1|compressedPlaneA1.5B1|compressedPlanePortraitA2B1|compressedPlanePortraitA1.5B1|paniniA2B1|paniniA1.5B1|paniniPortraitA2B1|paniniPortraitA1.5B1|mercator|transverseMercator)\n"
-        "      Warp surface type. The default is 'spherical'.\n"
-        "  --seam_megapix <float>\n"
-        "      Resolution for seam estimation step. The default is 0.1 Mpx.\n"
-        "  --seam (no|voronoi|gc_color|gc_colorgrad)\n"
-        "      Seam estimation method. The default is 'gc_color'.\n"
-        "  --compose_megapix <float>\n"
-        "      Resolution for compositing step. Use -1 for original resolution.\n"
-        "      The default is -1.\n"
-        "  --expos_comp (no|gain|gain_blocks)\n"
-        "      Exposure compensation method. The default is 'gain_blocks'.\n"
-        "  --blend (no|feather|multiband)\n"
-        "      Blending method. The default is 'multiband'.\n"
-        "  --blend_strength <float>\n"
-        "      Blending strength from [0,100] range. The default is 5.\n"
-        "  --output <result_img>\n"
-        "      The default is 'result.jpg'.\n"
-        "  --timelapse (as_is|crop) \n"
-        "      Output warped images separately as frames of a time lapse movie, with 'fixed_' prepended to input file names.\n"
-        "  --rangewidth <int>\n"
-        "      uses range_width to limit number of images to match with.\n";
-}
 
 
 // Default command line args
@@ -162,285 +56,44 @@ bool timelapse = false;
 int range_width = -1;
 
 
-static int parseCmdArgs(int argc, char** argv)
-{
-    if (argc == 1)
-    {
-        printUsage();
-        return -1;
-    }
-    for (int i = 1; i < argc; ++i)
-    {
-        if (string(argv[i]) == "--help" || string(argv[i]) == "/?")
-        {
-            printUsage();
-            return -1;
-        }
-        else if (string(argv[i]) == "--preview")
-        {
-            preview = true;
-        }
-        else if (string(argv[i]) == "--try_cuda")
-        {
-            if (string(argv[i + 1]) == "no")
-                try_cuda = false;
-            else if (string(argv[i + 1]) == "yes")
-                try_cuda = true;
-            else
-            {
-                cout << "Bad --try_cuda flag value\n";
-                return -1;
-            }
-            i++;
-        }
-        else if (string(argv[i]) == "--work_megapix")
-        {
-            work_megapix = atof(argv[i + 1]);
-            i++;
-        }
-        else if (string(argv[i]) == "--seam_megapix")
-        {
-            seam_megapix = atof(argv[i + 1]);
-            i++;
-        }
-        else if (string(argv[i]) == "--compose_megapix")
-        {
-            compose_megapix = atof(argv[i + 1]);
-            i++;
-        }
-        else if (string(argv[i]) == "--result")
-        {
-            result_name = argv[i + 1];
-            i++;
-        }
-        else if (string(argv[i]) == "--features")
-        {
-            features_type = argv[i + 1];
-            if (features_type == "orb")
-                match_conf = 0.3f;
-            i++;
-        }
-        else if (string(argv[i]) == "--matcher")
-        {
-            if (string(argv[i + 1]) == "homography" || string(argv[i + 1]) == "affine")
-                matcher_type = argv[i + 1];
-            else
-            {
-                cout << "Bad --matcher flag value\n";
-                return -1;
-            }
-            i++;
-        }
-        else if (string(argv[i]) == "--estimator")
-        {
-            if (string(argv[i + 1]) == "homography" || string(argv[i + 1]) == "affine")
-                estimator_type = argv[i + 1];
-            else
-            {
-                cout << "Bad --estimator flag value\n";
-                return -1;
-            }
-            i++;
-        }
-        else if (string(argv[i]) == "--match_conf")
-        {
-            match_conf = static_cast<float>(atof(argv[i + 1]));
-            i++;
-        }
-        else if (string(argv[i]) == "--conf_thresh")
-        {
-            conf_thresh = static_cast<float>(atof(argv[i + 1]));
-            i++;
-        }
-        else if (string(argv[i]) == "--ba")
-        {
-            ba_cost_func = argv[i + 1];
-            i++;
-        }
-        else if (string(argv[i]) == "--ba_refine_mask")
-        {
-            ba_refine_mask = argv[i + 1];
-            if (ba_refine_mask.size() != 5)
-            {
-                cout << "Incorrect refinement mask length.\n";
-                return -1;
-            }
-            i++;
-        }
-        else if (string(argv[i]) == "--wave_correct")
-        {
-            if (string(argv[i + 1]) == "no")
-                do_wave_correct = false;
-            else if (string(argv[i + 1]) == "horiz")
-            {
-                do_wave_correct = true;
-                wave_correct = detail::WAVE_CORRECT_HORIZ;
-            }
-            else if (string(argv[i + 1]) == "vert")
-            {
-                do_wave_correct = true;
-                wave_correct = detail::WAVE_CORRECT_VERT;
-            }
-            else
-            {
-                cout << "Bad --wave_correct flag value\n";
-                return -1;
-            }
-            i++;
-        }
-        else if (string(argv[i]) == "--save_graph")
-        {
-            save_graph = true;
-            save_graph_to = argv[i + 1];
-            i++;
-        }
-        else if (string(argv[i]) == "--warp")
-        {
-            warp_type = string(argv[i + 1]);
-            i++;
-        }
-        else if (string(argv[i]) == "--expos_comp")
-        {
-            if (string(argv[i + 1]) == "no")
-                expos_comp_type = ExposureCompensator::NO;
-            else if (string(argv[i + 1]) == "gain")
-                expos_comp_type = ExposureCompensator::GAIN;
-            else if (string(argv[i + 1]) == "gain_blocks")
-                expos_comp_type = ExposureCompensator::GAIN_BLOCKS;
-            else
-            {
-                cout << "Bad exposure compensation method\n";
-                return -1;
-            }
-            i++;
-        }
-        else if (string(argv[i]) == "--seam")
-        {
-            if (string(argv[i + 1]) == "no" ||
-                string(argv[i + 1]) == "voronoi" ||
-                string(argv[i + 1]) == "gc_color" ||
-                string(argv[i + 1]) == "gc_colorgrad" ||
-                string(argv[i + 1]) == "dp_color" ||
-                string(argv[i + 1]) == "dp_colorgrad")
-                seam_find_type = argv[i + 1];
-            else
-            {
-                cout << "Bad seam finding method\n";
-                return -1;
-            }
-            i++;
-        }
-        else if (string(argv[i]) == "--blend")
-        {
-            if (string(argv[i + 1]) == "no")
-                blend_type = Blender::NO;
-            else if (string(argv[i + 1]) == "feather")
-                blend_type = Blender::FEATHER;
-            else if (string(argv[i + 1]) == "multiband")
-                blend_type = Blender::MULTI_BAND;
-            else
-            {
-                cout << "Bad blending method\n";
-                return -1;
-            }
-            i++;
-        }
-        else if (string(argv[i]) == "--timelapse")
-        {
-            timelapse = true;
-
-            if (string(argv[i + 1]) == "as_is")
-                timelapse_type = Timelapser::AS_IS;
-            else if (string(argv[i + 1]) == "crop")
-                timelapse_type = Timelapser::CROP;
-            else
-            {
-                cout << "Bad timelapse method\n";
-                return -1;
-            }
-            i++;
-        }
-        else if (string(argv[i]) == "--rangewidth")
-        {
-            range_width = atoi(argv[i + 1]);
-            i++;
-        }
-        else if (string(argv[i]) == "--blend_strength")
-        {
-            blend_strength = static_cast<float>(atof(argv[i + 1]));
-            i++;
-        }
-        else if (string(argv[i]) == "--output")
-        {
-            result_name = argv[i + 1];
-            i++;
-        }
-        else
-            img_names.push_back(argv[i]);
-    }
-    if (preview)
-    {
-        compose_megapix = 0.6;
-    }
-    return 0;
-}
 
 
 int main(int argc, char* argv[])
 {
-#if ENABLE_LOG
-    int64 app_start_time = getTickCount();
-#endif
 
-#if 0
-    cv::setBreakOnError(true);
-#endif
-
-    int retval = parseCmdArgs(argc, argv);
-    if (retval)
-        return retval;
-
-    // Check if have enough images
-    int num_images = static_cast<int>(img_names.size());
-    if (num_images < 2)
+    if(argc<2)
     {
-        LOGLN("Need more images");
-        return -1;
+        cout<<"Need more images : "<<endl;
+        cout<<"Usage:"<<argv[0]<<" location/to/image1  location/to/image2 ..."<<endl;
+        return 0;
     }
+
+    for(int i=1;i<argc;i++)
+    {
+        img_names.push_back(argv[i]);
+    }
+
+
+    int num_images = argc-1;
 
     double work_scale = 1, seam_scale = 1, compose_scale = 1;
     bool is_work_scale_set = false, is_seam_scale_set = false, is_compose_scale_set = false;
 
-    LOGLN("Finding features...");
-#if ENABLE_LOG
-    int64 t = getTickCount();
-#endif
 
     Ptr<FeaturesFinder> finder;
-    if (features_type == "surf")
-    {
-#ifdef HAVE_OPENCV_XFEATURES2D
-        if (try_cuda && cuda::getCudaEnabledDeviceCount() > 0)
-            finder = makePtr<SurfFeaturesFinderGpu>();
-        else
-#endif
-            finder = makePtr<SurfFeaturesFinder>();
-    }
-    else if (features_type == "orb")
-    {
-        finder = makePtr<OrbFeaturesFinder>();
-    }
-    else
-    {
-        cout << "Unknown 2D features type: '" << features_type << "'.\n";
-        return -1;
-    }
+
+    finder = makePtr<SurfFeaturesFinder>();
 
     Mat full_img, img;
+
     vector<ImageFeatures> features(num_images);
+
     vector<Mat> images(num_images);
+
     vector<Size> full_img_sizes(num_images);
+
     double seam_work_aspect = 1;
+
 
     for (int i = 0; i < num_images; ++i)
     {
@@ -449,36 +102,29 @@ int main(int argc, char* argv[])
 
         if (full_img.empty())
         {
-            LOGLN("Can't open image " << img_names[i]);
+            cout<<"Can't open image " << img_names[i]<<endl;
             return -1;
         }
-        if (work_megapix < 0)
-        {
-            img = full_img;
-            work_scale = 1;
-            is_work_scale_set = true;
-        }
-        else
-        {
-            if (!is_work_scale_set)
-            {
-                work_scale = min(1.0, sqrt(work_megapix * 1e6 / full_img.size().area()));
-                is_work_scale_set = true;
-            }
-            resize(full_img, img, Size(), work_scale, work_scale);
-        }
-        if (!is_seam_scale_set)
-        {
-            seam_scale = min(1.0, sqrt(seam_megapix * 1e6 / full_img.size().area()));
-            seam_work_aspect = seam_scale / work_scale;
-            is_seam_scale_set = true;
-        }
+
+        work_scale = min(1.0, sqrt(work_megapix * 1e6 / full_img.size().area()));
+        is_work_scale_set = true;
+
+        resize(full_img, img, Size(), work_scale, work_scale);
+
+
+        seam_scale = min(1.0, sqrt(seam_megapix * 1e6 / full_img.size().area()));
+        seam_work_aspect = seam_scale / work_scale;
+        is_seam_scale_set = true;
+
 
         (*finder)(img, features[i]);
+
         features[i].img_idx = i;
-        LOGLN("Features in image #" << i+1 << ": " << features[i].keypoints.size());
+
+        cout<<"Features in image #" << i+1 << ": " << features[i].keypoints.size()<<endl;
 
         resize(full_img, img, Size(), seam_scale, seam_scale);
+
         images[i] = img.clone();
     }
 
@@ -486,39 +132,29 @@ int main(int argc, char* argv[])
     full_img.release();
     img.release();
 
-    LOGLN("Finding features, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
+    LOGLN("Finding features");
 
     LOG("Pairwise matching");
-#if ENABLE_LOG
-    t = getTickCount();
-#endif
+
     vector<MatchesInfo> pairwise_matches;
     Ptr<FeaturesMatcher> matcher;
-    if (matcher_type == "affine")
-        matcher = makePtr<AffineBestOf2NearestMatcher>(false, try_cuda, match_conf);
-    else if (range_width==-1)
-        matcher = makePtr<BestOf2NearestMatcher>(try_cuda, match_conf);
-    else
-        matcher = makePtr<BestOf2NearestRangeMatcher>(range_width, try_cuda, match_conf);
+
+
+    matcher = makePtr<BestOf2NearestMatcher>(try_cuda, match_conf);
+
 
     (*matcher)(features, pairwise_matches);
     matcher->collectGarbage();
 
-    LOGLN("Pairwise matching, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
-
-    // Check if we should save matches graph
-    if (save_graph)
-    {
-        LOGLN("Saving matches graph...");
-        ofstream f(save_graph_to.c_str());
-        f << matchesGraphAsString(img_names, pairwise_matches, conf_thresh);
-    }
+    LOGLN("Pairwise matching ");
 
     // Leave only images we are sure are from the same panorama
     vector<int> indices = leaveBiggestComponent(features, pairwise_matches, conf_thresh);
     vector<Mat> img_subset;
     vector<String> img_names_subset;
     vector<Size> full_img_sizes_subset;
+
+
     for (size_t i = 0; i < indices.size(); ++i)
     {
         img_names_subset.push_back(img_names[indices[i]]);
@@ -532,6 +168,7 @@ int main(int argc, char* argv[])
 
     // Check if we still have enough images
     num_images = static_cast<int>(img_names.size());
+
     if (num_images < 2)
     {
         LOGLN("Need more images");
@@ -539,12 +176,13 @@ int main(int argc, char* argv[])
     }
 
     Ptr<Estimator> estimator;
-    if (estimator_type == "affine")
-        estimator = makePtr<AffineBasedEstimator>();
-    else
-        estimator = makePtr<HomographyBasedEstimator>();
+
+    estimator = makePtr<HomographyBasedEstimator>();
+
 
     vector<CameraParams> cameras;
+
+
     if (!(*estimator)(features, pairwise_matches, cameras))
     {
         cout << "Homography estimation failed.\n";
@@ -560,23 +198,23 @@ int main(int argc, char* argv[])
     }
 
     Ptr<detail::BundleAdjusterBase> adjuster;
-    if (ba_cost_func == "reproj") adjuster = makePtr<detail::BundleAdjusterReproj>();
-    else if (ba_cost_func == "ray") adjuster = makePtr<detail::BundleAdjusterRay>();
-    else if (ba_cost_func == "affine") adjuster = makePtr<detail::BundleAdjusterAffinePartial>();
-    else if (ba_cost_func == "no") adjuster = makePtr<NoBundleAdjuster>();
-    else
-    {
-        cout << "Unknown bundle adjustment cost function: '" << ba_cost_func << "'.\n";
-        return -1;
-    }
+
+    adjuster = makePtr<detail::BundleAdjusterRay>();
+
     adjuster->setConfThresh(conf_thresh);
+
+
     Mat_<uchar> refine_mask = Mat::zeros(3, 3, CV_8U);
-    if (ba_refine_mask[0] == 'x') refine_mask(0,0) = 1;
-    if (ba_refine_mask[1] == 'x') refine_mask(0,1) = 1;
-    if (ba_refine_mask[2] == 'x') refine_mask(0,2) = 1;
-    if (ba_refine_mask[3] == 'x') refine_mask(1,1) = 1;
-    if (ba_refine_mask[4] == 'x') refine_mask(1,2) = 1;
+    refine_mask(0,0) = 1;
+    refine_mask(0,1) = 1;
+    refine_mask(0,2) = 1;
+    refine_mask(1,1) = 1;
+    refine_mask(1,2) = 1;
+
+
     adjuster->setRefinementMask(refine_mask);
+
+
     if (!(*adjuster)(features, pairwise_matches, cameras))
     {
         cout << "Camera parameters adjusting failed.\n";
@@ -594,25 +232,21 @@ int main(int argc, char* argv[])
 
     sort(focals.begin(), focals.end());
     float warped_image_scale;
+
+
     if (focals.size() % 2 == 1)
         warped_image_scale = static_cast<float>(focals[focals.size() / 2]);
     else
         warped_image_scale = static_cast<float>(focals[focals.size() / 2 - 1] + focals[focals.size() / 2]) * 0.5f;
 
-    if (do_wave_correct)
-    {
-        vector<Mat> rmats;
-        for (size_t i = 0; i < cameras.size(); ++i)
-            rmats.push_back(cameras[i].R.clone());
-        waveCorrect(rmats, wave_correct);
-        for (size_t i = 0; i < cameras.size(); ++i)
-            cameras[i].R = rmats[i];
-    }
+    vector<Mat> rmats;
+    for (size_t i = 0; i < cameras.size(); ++i)
+        rmats.push_back(cameras[i].R.clone());
+    waveCorrect(rmats, wave_correct);
+    for (size_t i = 0; i < cameras.size(); ++i)
+        cameras[i].R = rmats[i];
 
     LOGLN("Warping images (auxiliary)... ");
-#if ENABLE_LOG
-    t = getTickCount();
-#endif
 
     vector<Point> corners(num_images);
     vector<UMat> masks_warped(num_images);
@@ -630,58 +264,7 @@ int main(int argc, char* argv[])
     // Warp images and their masks
 
     Ptr<WarperCreator> warper_creator;
-#ifdef HAVE_OPENCV_CUDAWARPING
-    if (try_cuda && cuda::getCudaEnabledDeviceCount() > 0)
-    {
-        if (warp_type == "plane")
-            warper_creator = makePtr<cv::PlaneWarperGpu>();
-        else if (warp_type == "cylindrical")
-            warper_creator = makePtr<cv::CylindricalWarperGpu>();
-        else if (warp_type == "spherical")
-            warper_creator = makePtr<cv::SphericalWarperGpu>();
-    }
-    else
-#endif
-    {
-        if (warp_type == "plane")
-            warper_creator = makePtr<cv::PlaneWarper>();
-        else if (warp_type == "affine")
-            warper_creator = makePtr<cv::AffineWarper>();
-        else if (warp_type == "cylindrical")
-            warper_creator = makePtr<cv::CylindricalWarper>();
-        else if (warp_type == "spherical")
-            warper_creator = makePtr<cv::SphericalWarper>();
-        else if (warp_type == "fisheye")
-            warper_creator = makePtr<cv::FisheyeWarper>();
-        else if (warp_type == "stereographic")
-            warper_creator = makePtr<cv::StereographicWarper>();
-        else if (warp_type == "compressedPlaneA2B1")
-            warper_creator = makePtr<cv::CompressedRectilinearWarper>(2.0f, 1.0f);
-        else if (warp_type == "compressedPlaneA1.5B1")
-            warper_creator = makePtr<cv::CompressedRectilinearWarper>(1.5f, 1.0f);
-        else if (warp_type == "compressedPlanePortraitA2B1")
-            warper_creator = makePtr<cv::CompressedRectilinearPortraitWarper>(2.0f, 1.0f);
-        else if (warp_type == "compressedPlanePortraitA1.5B1")
-            warper_creator = makePtr<cv::CompressedRectilinearPortraitWarper>(1.5f, 1.0f);
-        else if (warp_type == "paniniA2B1")
-            warper_creator = makePtr<cv::PaniniWarper>(2.0f, 1.0f);
-        else if (warp_type == "paniniA1.5B1")
-            warper_creator = makePtr<cv::PaniniWarper>(1.5f, 1.0f);
-        else if (warp_type == "paniniPortraitA2B1")
-            warper_creator = makePtr<cv::PaniniPortraitWarper>(2.0f, 1.0f);
-        else if (warp_type == "paniniPortraitA1.5B1")
-            warper_creator = makePtr<cv::PaniniPortraitWarper>(1.5f, 1.0f);
-        else if (warp_type == "mercator")
-            warper_creator = makePtr<cv::MercatorWarper>();
-        else if (warp_type == "transverseMercator")
-            warper_creator = makePtr<cv::TransverseMercatorWarper>();
-    }
-
-    if (!warper_creator)
-    {
-        cout << "Can't create the following warper '" << warp_type << "'\n";
-        return 1;
-    }
+    warper_creator = makePtr<cv::SphericalWarper>();
 
     Ptr<RotationWarper> warper = warper_creator->create(static_cast<float>(warped_image_scale * seam_work_aspect));
 
@@ -703,43 +286,15 @@ int main(int argc, char* argv[])
     for (int i = 0; i < num_images; ++i)
         images_warped[i].convertTo(images_warped_f[i], CV_32F);
 
-    LOGLN("Warping images, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
+    LOGLN("Warping images");
 
     Ptr<ExposureCompensator> compensator = ExposureCompensator::createDefault(expos_comp_type);
     compensator->feed(corners, images_warped, masks_warped);
 
     Ptr<SeamFinder> seam_finder;
-    if (seam_find_type == "no")
-        seam_finder = makePtr<detail::NoSeamFinder>();
-    else if (seam_find_type == "voronoi")
-        seam_finder = makePtr<detail::VoronoiSeamFinder>();
-    else if (seam_find_type == "gc_color")
-    {
-#ifdef HAVE_OPENCV_CUDALEGACY
-        if (try_cuda && cuda::getCudaEnabledDeviceCount() > 0)
-            seam_finder = makePtr<detail::GraphCutSeamFinderGpu>(GraphCutSeamFinderBase::COST_COLOR);
-        else
-#endif
-            seam_finder = makePtr<detail::GraphCutSeamFinder>(GraphCutSeamFinderBase::COST_COLOR);
-    }
-    else if (seam_find_type == "gc_colorgrad")
-    {
-#ifdef HAVE_OPENCV_CUDALEGACY
-        if (try_cuda && cuda::getCudaEnabledDeviceCount() > 0)
-            seam_finder = makePtr<detail::GraphCutSeamFinderGpu>(GraphCutSeamFinderBase::COST_COLOR_GRAD);
-        else
-#endif
-            seam_finder = makePtr<detail::GraphCutSeamFinder>(GraphCutSeamFinderBase::COST_COLOR_GRAD);
-    }
-    else if (seam_find_type == "dp_color")
-        seam_finder = makePtr<detail::DpSeamFinder>(DpSeamFinder::COLOR);
-    else if (seam_find_type == "dp_colorgrad")
-        seam_finder = makePtr<detail::DpSeamFinder>(DpSeamFinder::COLOR_GRAD);
-    if (!seam_finder)
-    {
-        cout << "Can't create the following seam finder '" << seam_find_type << "'\n";
-        return 1;
-    }
+
+    seam_finder = makePtr<detail::GraphCutSeamFinder>(GraphCutSeamFinderBase::COST_COLOR);
+
 
     seam_finder->find(images_warped_f, corners, masks_warped);
 
@@ -750,9 +305,7 @@ int main(int argc, char* argv[])
     masks.clear();
 
     LOGLN("Compositing...");
-#if ENABLE_LOG
-    t = getTickCount();
-#endif
+
 
     Mat img_warped, img_warped_s;
     Mat dilated_mask, seam_mask, mask, mask_warped;
@@ -847,12 +400,7 @@ int main(int argc, char* argv[])
                 mb->setNumBands(static_cast<int>(ceil(log(blend_width)/log(2.)) - 1.));
                 LOGLN("Multi-band blender, number of bands: " << mb->numBands());
             }
-            else if (blend_type == Blender::FEATHER)
-            {
-                FeatherBlender* fb = dynamic_cast<FeatherBlender*>(blender.get());
-                fb->setSharpness(1.f/blend_width);
-                LOGLN("Feather blender, sharpness: " << fb->sharpness());
-            }
+
             blender->prepare(corners, sizes);
         }
         else if (!timelapser && timelapse)
@@ -862,41 +410,20 @@ int main(int argc, char* argv[])
         }
 
         // Blend the current image
-        if (timelapse)
-        {
-            timelapser->process(img_warped_s, Mat::ones(img_warped_s.size(), CV_8UC1), corners[img_idx]);
-            String fixedFileName;
-            size_t pos_s = String(img_names[img_idx]).find_last_of("/\\");
-            if (pos_s == String::npos)
-            {
-                fixedFileName = "fixed_" + img_names[img_idx];
-            }
-            else
-            {
-                fixedFileName = "fixed_" + String(img_names[img_idx]).substr(pos_s + 1, String(img_names[img_idx]).length() - pos_s);
-            }
-            imwrite(fixedFileName, timelapser->getDst());
-        }
-        else
-        {
-            blender->feed(img_warped_s, mask_warped, corners[img_idx]);
-        }
+
+        blender->feed(img_warped_s, mask_warped, corners[img_idx]);
+
     }
 
-    if (!timelapse)
-    {
-        Mat result, result_mask;
-        blender->blend(result, result_mask);
-
-        LOGLN("Compositing, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
-        imshow("test",result);
-        waitKey(0);
-        imwrite(result_name, result);
-    }
-
-    // imshow("stitched",result);
+    Mat result, result_mask;
+    blender->blend(result, result_mask);
+    imwrite(result_name, result);
+    // imshow("final",result);
     // waitKey(0);
 
-    LOGLN("Finished, total time: " << ((getTickCount() - app_start_time) / getTickFrequency()) << " sec");
+    // // imshow("stitched",result);
+    // // waitKey(0);
+
+    LOGLN("Finished, total time: " " sec");
     return 0;
 }
