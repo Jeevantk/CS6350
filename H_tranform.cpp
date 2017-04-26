@@ -1,6 +1,4 @@
 //Author -------> Jeevan Thomas Koshy
-//Owned by ----> Effizient Pvt Ltd
-
 
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
@@ -17,8 +15,8 @@ int main()
 {
 
 	//Reading the images
-	Mat img1=imread("rio-00.png");
-	Mat img2=imread("rio-01.png");
+	Mat img1=imread("pan2.jpg");
+	Mat img2=imread("pan1.jpg");
 
 
 	Ptr<Feature2D> sift=SIFT::create();
@@ -98,8 +96,9 @@ int main()
 
 	Mat half(result,Rect(0,0,img2.cols,img2.rows));
 	img2.copyTo(half);
+	imwrite("myself.jpg",result);
 	imshow("Result",result);
-
+	
 	waitKey(0);
 	return 0;
 }

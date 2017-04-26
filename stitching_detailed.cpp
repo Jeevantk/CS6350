@@ -1,5 +1,3 @@
-
-
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -18,7 +16,7 @@
 #include "opencv2/stitching/detail/warpers.hpp"
 #include "opencv2/stitching/warpers.hpp"
 
-#define ENABLE_LOG 1
+#define ENABLE_LOG 0
 #define LOG(msg) std::cout << msg
 #define LOGLN(msg) std::cout << msg << std::endl
 
@@ -121,7 +119,7 @@ int main(int argc, char* argv[])
 
         features[i].img_idx = i;
 
-        cout<<"Features in image #" << i+1 << ": " << features[i].keypoints.size()<<endl;
+        //cout<<"Features in image #" << i+1 << ": " << features[i].keypoints.size()<<endl;
 
         resize(full_img, img, Size(), seam_scale, seam_scale);
 
@@ -132,21 +130,21 @@ int main(int argc, char* argv[])
     full_img.release();
     img.release();
 
-    LOGLN("Finding features");
+    //LOGLN("Finding features");
 
-    LOG("Pairwise matching");
+    //LOG("Pairwise matching");
 
     vector<MatchesInfo> pairwise_matches;
     Ptr<FeaturesMatcher> matcher;
 
 
-    matcher = makePtr<BestOf2NearestMatcher>(try_cuda, match_conf);
+    matcher = makePtr<BestOf2NearestMatcher>();
 
 
     (*matcher)(features, pairwise_matches);
     matcher->collectGarbage();
 
-    LOGLN("Pairwise matching ");
+    //LOGLN("Pairwise matching ");
 
     // Leave only images we are sure are from the same panorama
     vector<int> indices = leaveBiggestComponent(features, pairwise_matches, conf_thresh);
@@ -171,7 +169,7 @@ int main(int argc, char* argv[])
 
     if (num_images < 2)
     {
-        LOGLN("Need more images");
+        cout<<"Need more images"<<endl;
         return -1;
     }
 
@@ -194,7 +192,7 @@ int main(int argc, char* argv[])
         Mat R;
         cameras[i].R.convertTo(R, CV_32F);
         cameras[i].R = R;
-        LOGLN("Initial camera intrinsics #" << indices[i]+1 << ":\nK:\n" << cameras[i].K() << "\nR:\n" << cameras[i].R);
+        //LOGLN("Initial camera intrinsics #" << indices[i]+1 << ":\nK:\n" << cameras[i].K() << "\nR:\n" << cameras[i].R);
     }
 
     Ptr<detail::BundleAdjusterBase> adjuster;
@@ -226,7 +224,7 @@ int main(int argc, char* argv[])
     vector<double> focals;
     for (size_t i = 0; i < cameras.size(); ++i)
     {
-        LOGLN("Camera #" << indices[i]+1 << ":\nK:\n" << cameras[i].K() << "\nR:\n" << cameras[i].R);
+        //LOGLN("Camera #" << indices[i]+1 << ":\nK:\n" << cameras[i].K() << "\nR:\n" << cameras[i].R);
         focals.push_back(cameras[i].focal);
     }
 
@@ -246,7 +244,7 @@ int main(int argc, char* argv[])
     for (size_t i = 0; i < cameras.size(); ++i)
         cameras[i].R = rmats[i];
 
-    LOGLN("Warping images (auxiliary)... ");
+    //LOGLN("Warping images (auxiliary)... ");
 
     vector<Point> corners(num_images);
     vector<UMat> masks_warped(num_images);
@@ -286,7 +284,7 @@ int main(int argc, char* argv[])
     for (int i = 0; i < num_images; ++i)
         images_warped[i].convertTo(images_warped_f[i], CV_32F);
 
-    LOGLN("Warping images");
+    //LOGLN("Warping images");
 
     Ptr<ExposureCompensator> compensator = ExposureCompensator::createDefault(expos_comp_type);
     compensator->feed(corners, images_warped, masks_warped);
@@ -304,7 +302,7 @@ int main(int argc, char* argv[])
     images_warped_f.clear();
     masks.clear();
 
-    LOGLN("Compositing...");
+    //LOGLN("Compositing...");
 
 
     Mat img_warped, img_warped_s;
@@ -316,7 +314,7 @@ int main(int argc, char* argv[])
 
     for (int img_idx = 0; img_idx < num_images; ++img_idx)
     {
-        LOGLN("Compositing image #" << indices[img_idx]+1);
+        //LOGLN("Compositing image #" << indices[img_idx]+1);
 
         // Read image and resize it if necessary
         full_img = imread(img_names[img_idx]);
@@ -398,7 +396,7 @@ int main(int argc, char* argv[])
             {
                 MultiBandBlender* mb = dynamic_cast<MultiBandBlender*>(blender.get());
                 mb->setNumBands(static_cast<int>(ceil(log(blend_width)/log(2.)) - 1.));
-                LOGLN("Multi-band blender, number of bands: " << mb->numBands());
+                //LOGLN("Multi-band blender, number of bands: " << mb->numBands());
             }
 
             blender->prepare(corners, sizes);
@@ -424,6 +422,6 @@ int main(int argc, char* argv[])
     // // imshow("stitched",result);
     // // waitKey(0);
 
-    LOGLN("Finished, total time: " " sec");
+    //LOGLN("Finished, total time: " " sec");
     return 0;
 }
